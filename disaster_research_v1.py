@@ -118,14 +118,15 @@ def connect_houses(graph, dist_thres, max_dist, num_connects):
 def build_data(graph):
 	ret_data = []
 	header = ["house", "x", "y", "dem", "soc", "dam", "group", "connections", "x_mean", "x_std", "y_mean", "y_std"]
-	ret_data.append(header)
 	hs = graph.nodes()
 	for h in hs:
 		tmp = [h.name, h.x, h.y, h.dem, h.soc, h.dam, h.group, 
 			  [(a.name, b.name) for a, b in graph.edges(h)],
                           h.x_mean, h.x_std, h.y_mean, h.y_std]
 		ret_data.append(tmp)
-	return ret_data
+        ret_data = sorted(ret_data, key=lambda x: x[0])
+        ret_data.insert(0, header)
+        return ret_data 
 
 def write_to_csv(fname, data):
 	tmp_f = open(fname, 'w')
@@ -135,17 +136,19 @@ def write_to_csv(fname, data):
 
 def make_communities(num_communitites, num_houses, num_connects, dist_thres):
 	houses = []
+        hcount = 1
 
 	for _ in xrange(num_communitites):
 		x_mean = uniform(0, 100)
 		x_std = uniform(0, x_mean)
 		y_mean = uniform(0, 100)
 		y_std = uniform(0, y_mean)
-		for i in xrange(num_houses):
-			h = house(i, x_mean, x_std, y_mean, y_std)
+		for _ in xrange(num_houses):
+			h = house(hcount, x_mean, x_std, y_mean, y_std)
 			if (h.x > 100) or (h.x < 0) or (h.y > 100) or (h.y < 0):
 				continue # exclude from data
 			houses.append(h)
+                        hcount += 1
 
 	n = len(houses)
 	if num_connects > (0.5*n*(n-1)):
