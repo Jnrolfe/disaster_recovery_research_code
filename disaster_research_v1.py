@@ -1,7 +1,7 @@
 """
 @filename: disaster_research_v1.py
 @author: james_rolfe
-@updated: 20180218
+@updated: 20180306
 @about: 
 """
 
@@ -22,7 +22,13 @@ class house():
 		self.name = name
 		self.x = normal(x_mean, x_std)
 		self.y = normal(y_mean, y_std)
+                self.x_mean = x_mean
+                self.y_mean = y_mean
+                self.x_std = x_std
+                self.y_std = y_std
 		self.util = 0
+                self.soc = 0
+                self.dem = 0
 		self.dam = 0
 		self.group = 0
 
@@ -33,24 +39,24 @@ def gmm_det(graph, num_communitites):
 	gmm.fit(data)
 	labels = gmm.predict(data)
 
-	for i in xrange(len(hs)):
-		hs[i].group = int(labels[i])+1
+	for i,h in enumerate(hs):
+	    h.group = int(labels[i]) + 1
 
-	# # Plotting
-	# xs = [x for x,y in data]
-	# ys = [y for x,y in data]
+	# Plotting
+	xs = [x for x,y in data]
+	ys = [y for x,y in data]
 
-	# df = pd.DataFrame(dict(x=xs, y=ys, label=labels))
-	# groups = df.groupby('label')
-	# print df
+	df = pd.DataFrame(dict(x=xs, y=ys, label=labels))
+	groups = df.groupby('label')
+	print df
 
-	# fig, ax = plt.subplots()
-	# ax.margins(0.05) # Optional, just adds 5% padding to the autoscaling
-	# for name, group in groups:
-	#     ax.plot(group.x, group.y, marker='o', linestyle='', ms=9, label=name)
-	# ax.legend()
+	fig, ax = plt.subplots()
+	ax.margins(0.05) # Optional, just adds 5% padding to the autoscaling
+	for name, group in groups:
+	    ax.plot(group.x, group.y, marker='o', linestyle='', ms=9, label=name)
+	ax.legend()
 
-	# plt.show()
+	plt.show()
 
 	return
 
@@ -65,12 +71,14 @@ def get_soc_resource(g, node, max_deg):
 	n_deg = g.degree(node)
 	return (float(n_deg) / max_deg) * 100
 
-def set_utilities(graph):
-	max_deg = max(sorted(nx.degree(graph).values(),reverse=True))
+def set_utilities(graph, num_comm):
+	max_deg = max([y for x,y in nx.degree(graph)])
 	for h in graph.nodes():
-		attr_list = [uniform(0, 100)]
+		attr_list = [uniform((float(h.group)/num_comm), 1)*100]
 		dem = get_dem_resource(attr_list)
 		soc = get_soc_resource(graph, h, max_deg)
+                h.soc = soc
+                h.dem = dem
 		h.util = (soc + dem)/2
 	return 
 
@@ -109,12 +117,13 @@ def connect_houses(graph, dist_thres, max_dist, num_connects):
 
 def build_data(graph):
 	ret_data = []
-	header = ["house", "x", "y", "util", "dam", "group", "connections"]
+	header = ["house", "x", "y", "dem", "soc", "dam", "group", "connections", "x_mean", "x_std", "y_mean", "y_std"]
 	ret_data.append(header)
 	hs = graph.nodes()
 	for h in hs:
-		tmp = [h.name, h.x, h.y, h.util, h.dam, h.group, 
-			  [(a.name, b.name) for a, b in graph.edges(h)]]
+		tmp = [h.name, h.x, h.y, h.dem, h.soc, h.dam, h.group, 
+			  [(a.name, b.name) for a, b in graph.edges(h)],
+                          h.x_mean, h.x_std, h.y_mean, h.y_std]
 		ret_data.append(tmp)
 	return ret_data
 
@@ -153,16 +162,20 @@ def make_communities(num_communitites, num_houses, num_connects, dist_thres):
 
 	gmm_det(g, num_communitites)
 
-	set_utilities(g)
+	set_utilities(g, num_communitites)
 	set_damage(g)
 
 	return g
 
 NUM_GROUPS = 5
-NUM_HOUSES_PER_GROUP = 1000
+NUM_HOUSES_PER_GROUP = 100
 NUM_CONNS = 10000
 DIST_THRES = 0.05
-FNAME = "data_v1_20180219.csv"
+FNAME = "data_v1_20180306.csv"
 
 g = make_communities(NUM_GROUPS, NUM_HOUSES_PER_GROUP, NUM_CONNS, DIST_THRES)
 write_to_csv(FNAME, build_data(g))
+
+# util_list = [h.util for h in g.nodes()]
+# nx.draw(g, cmap=plt.get_cmap('Blues'), node_color=util_list)
+# plt.show()
