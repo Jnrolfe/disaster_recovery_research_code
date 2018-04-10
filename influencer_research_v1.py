@@ -1,5 +1,5 @@
 """
-@filename: disaster_research_v1.py
+@filename: influencer_research_v1.py
 @author: james_rolfe
 @updated: 20180306
 @about: 
@@ -17,7 +17,7 @@ import pandas as pd
 from random import sample
 import sys
 
-class house():
+class user():
 	def __init__(self, name, x_mean, x_std, y_mean, y_std):
 		self.name = name
 		self.x = normal(x_mean, x_std)
@@ -94,14 +94,14 @@ def norm_dist(p0, p1, max_dist):
 	# normalized distance (observed/max)
     return distance(p0, p1)/max_dist
 
-def connect_houses(graph, dist_thres, max_dist, num_connects):
-	houses = graph.nodes()
-	max_iters = len(houses)
+def connect_users(graph, dist_thres, max_dist, num_connects):
+	users = graph.nodes()
+	max_iters = len(users)
 	iters = 0
 	conns = 0
 	
 	while(conns < num_connects):
-		samp = sample(houses, 2)
+		samp = sample(users, 2)
 		h1, h2 = samp[0], samp[1]
 		if norm_dist((h1.x, h1.y), (h2.x, h2.y), max_dist) < dist_thres:
 			graph.add_edge(h1, h2)
@@ -117,7 +117,7 @@ def connect_houses(graph, dist_thres, max_dist, num_connects):
 
 def build_data(graph):
 	ret_data = []
-	header = ["house", "x", "y", "dem", "soc", "dam", "group", "connections", "x_mean", "x_std", "y_mean", "y_std"]
+	header = ["user", "x", "y", "dem", "soc", "dam", "group", "connections", "x_mean", "x_std", "y_mean", "y_std"]
 	hs = graph.nodes()
 	for h in hs:
 		tmp = [h.name, h.x, h.y, h.dem, h.soc, h.dam, h.group, 
@@ -134,8 +134,8 @@ def write_to_csv(fname, data):
 		writer = csv.writer(tmp_f)
 		writer.writerows(data)
 
-def make_communities(num_communitites, num_houses, num_connects, dist_thres):
-	houses = []
+def make_communities(num_communitites, num_users, num_connects, dist_thres):
+	users = []
         hcount = 1
 
 	for _ in xrange(num_communitites):
@@ -143,14 +143,14 @@ def make_communities(num_communitites, num_houses, num_connects, dist_thres):
 		x_std = uniform(0, x_mean)
 		y_mean = uniform(0, 100)
 		y_std = uniform(0, y_mean)
-		for _ in xrange(num_houses):
-			h = house(hcount, x_mean, x_std, y_mean, y_std)
+		for _ in xrange(num_users):
+			h = user(hcount, x_mean, x_std, y_mean, y_std)
 			if (h.x > 100) or (h.x < 0) or (h.y > 100) or (h.y < 0):
 				continue # exclude from data
-			houses.append(h)
+			users.append(h)
                         hcount += 1
 
-	n = len(houses)
+	n = len(users)
 	if num_connects > (0.5*n*(n-1)):
 		print "ERROR: Number of connections is too large"
 		print "# connections requested: " + str(num_connects)
@@ -158,10 +158,10 @@ def make_communities(num_communitites, num_houses, num_connects, dist_thres):
 		sys.exit(1)
 
 	g = nx.Graph()
-	g.add_nodes_from(houses)
+	g.add_nodes_from(users)
 
-	max_dist = max([distance((0, 0), (h.x, h.y)) for h in houses])
-	connect_houses(g, dist_thres, max_dist, num_connects)
+	max_dist = max([distance((0, 0), (h.x, h.y)) for h in users])
+	connect_users(g, dist_thres, max_dist, num_connects)
 
 	gmm_det(g, num_communitites)
 
@@ -171,12 +171,12 @@ def make_communities(num_communitites, num_houses, num_connects, dist_thres):
 	return g
 
 NUM_GROUPS = 5
-NUM_HOUSES_PER_GROUP = 100
+NUM_USERS_PER_GROUP = 100
 NUM_CONNS = 10000
 DIST_THRES = 0.05
-FNAME = "data_v1_20180306.csv"
+FNAME = "data_v1_20180310.csv"
 
-g = make_communities(NUM_GROUPS, NUM_HOUSES_PER_GROUP, NUM_CONNS, DIST_THRES)
+g = make_communities(NUM_GROUPS, NUM_USERS_PER_GROUP, NUM_CONNS, DIST_THRES)
 write_to_csv(FNAME, build_data(g))
 
 # util_list = [h.util for h in g.nodes()]
